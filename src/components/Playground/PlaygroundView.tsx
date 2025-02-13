@@ -49,7 +49,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     avgTime: 0,
   });
 
-  const [nextQuestion, setNextQuestion] = useState<Question | null>(null);
+  const [nextQuestion ] = useState<Question | null>(null);
   const [preloadedQuestion, setPreloadedQuestion] = useState<Question | null>(null);
   const [shouldShowNext, setShouldShowNext] = useState(false);
   const COUNTDOWN_DURATION = 5;
@@ -71,6 +71,17 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
       clearInterval(timerInterval);
       setTimerInterval(null);
     }
+  };
+
+  const handlePauseToggle = () => {
+    setIsPaused((prev) => {
+      if (prev) {
+        startQuestionTimer();
+      } else {
+        stopQuestionTimer();
+      }
+      return !prev;
+    });
   };
 
   const fetchNewQuestion = async () => {
@@ -322,7 +333,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
                 {currentQuestion?.text}
               </h2>
               <button
-                onClick={() => setIsPaused(!isPaused)}
+                onClick={handlePauseToggle}
                 className="p-2 rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
               >
                 {isPaused ? (
