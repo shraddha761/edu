@@ -1,4 +1,3 @@
-// src/components/shared/UserInfoModal.tsx
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
@@ -23,6 +22,22 @@ export const UserInfoModal = ({ isOpen, onClose, onSubmit }: UserInfoModalProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (userInfo.age < 1 || userInfo.age > 100) {
+        alert("Please enter a valid age between 1 and 100.");
+        return;
+    }
+
+    if (!userInfo.location.trim()) {
+        alert("Location cannot be empty.");
+        return;
+    }
+
+    if (!userInfo.studyingFor) {
+        alert("Please select an exam type.");
+        return;
+    }
+
     onSubmit(userInfo);
     onClose();
   };

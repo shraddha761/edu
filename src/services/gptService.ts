@@ -1,10 +1,10 @@
 import { Question, UserContext, ExploreResponse } from '../types';
 import OpenAI from 'openai';
-  
-  export class GPTService {
+
+export class GPTService {
   private openai: OpenAI;
-  
-    constructor() {
+
+  constructor() {
     this.openai = new OpenAI({
       apiKey: import.meta.env.VITE_OPENAI_API_KEY,
       dangerouslyAllowBrowser: true
@@ -16,22 +16,15 @@ import OpenAI from 'openai';
       const response = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [
-          { 
-            role: 'system', 
-            content: `${systemPrompt} Provide your response in JSON format.` 
-          },
-          { 
-            role: 'user', 
-            content: userPrompt 
-          }
-            ],
-            temperature: 0.7,
-        max_tokens: maxTokens,
-            response_format: { type: "json_object" }
+          { role: 'system', content: `${systemPrompt} Provide your response in JSON format.` },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: maxTokens
       });
 
       return response.choices[0].message?.content || '';
-      } catch (error) {
+    } catch (error) {
       console.error('OpenAI API Error:', error);
       throw new Error('Failed to generate content');
     }
@@ -122,25 +115,7 @@ import OpenAI from 'openai';
         - Focus on key information only
         - No repetition between paragraphs
         - Make every word count
-        - Keep examples specific and brief
-
-        SUBTOPIC GUIDELINES:
-        - Focus on the most fascinating aspects
-        - Highlight unexpected connections
-        - Show real-world relevance
-        - Include cutting-edge developments
-        - Connect to current trends
-        - Emphasize "wow factor"
-
-        QUESTION GUIDELINES:
-        - Start with curiosity triggers: "What if", "How exactly", "Why does", "Can we"
-        - Focus on mind-bending aspects
-        - Highlight counterintuitive elements
-        - Explore edge cases
-        - Connect to emerging trends
-        - Challenge assumptions
-        - Spark imagination
-        - Make reader think "I never thought about that!"`;
+        - Keep examples specific and brief`;
 
       const userPrompt = `Explain "${query}" in approximately three 20-30 word paragraphs:
         1. Basic definition without using words like imagine
@@ -148,14 +123,14 @@ import OpenAI from 'openai';
         3. Real-world application examples without using the word real world application
         Make it engaging for someone aged ${userContext.age}.`;
 
-        const content = await this.makeRequest(systemPrompt, userPrompt);
+      const content = await this.makeRequest(systemPrompt, userPrompt);
       console.log('Raw GPT response:', content);
       
       if (!content) {
         throw new Error('Empty response from GPT');
       }
 
-        const parsedContent = JSON.parse(content);
+      const parsedContent = JSON.parse(content);
       console.log('Parsed content:', parsedContent);
 
       // Validate the response structure
@@ -196,7 +171,6 @@ import OpenAI from 'openai';
 
   private validateQuestionFormat(question: Question): boolean {
     try {
-      // Basic validation
       if (!question.text?.trim()) return false;
       if (!Array.isArray(question.options) || question.options.length !== 4) return false;
       if (question.options.some(opt => !opt?.trim())) return false;
@@ -204,11 +178,9 @@ import OpenAI from 'openai';
           question.correctAnswer < 0 || 
           question.correctAnswer > 3) return false;
 
-      // Explanation validation
       if (!question.explanation?.correct?.trim() || 
           !question.explanation?.key_point?.trim()) return false;
 
-      // Additional validation
       if (question.text.length < 10) return false;  // Too short
       if (question.options.length !== new Set(question.options).size) return false; // Duplicates
       if (question.explanation.correct.length < 5 || 
@@ -231,7 +203,6 @@ import OpenAI from 'openai';
         'current_trends'
       ];
 
-      // Randomly select an aspect to focus on
       const selectedAspect = aspects[Math.floor(Math.random() * aspects.length)];
       
       const systemPrompt = `Generate a UNIQUE multiple-choice question about ${topic}.
@@ -251,51 +222,7 @@ import OpenAI from 'openai';
           "subtopic": "specific subtopic",
           "questionType": "conceptual",
           "ageGroup": "${userContext.age}"
-        }
-
-        IMPORTANT RULES FOR UNIQUENESS:
-        1. For ${topic}, based on selected aspect:
-           - core_concepts: Focus on fundamental principles and theories
-           - applications: Focus on real-world use cases and implementations
-           - problem_solving: Present a scenario that needs solution
-           - analysis: Compare different approaches or technologies
-           - current_trends: Focus on recent developments and future directions
-
-        2. Question Variety:
-           - NEVER use the same question pattern twice
-           - Mix theoretical and practical aspects
-           - Include industry-specific examples
-           - Use different question formats (what/why/how/compare)
-           - Incorporate current developments in ${topic}
-
-        3. Answer Choices:
-           - Make ALL options equally plausible
-           - Randomly assign the correct answer (0-3)
-           - Ensure options are distinct but related
-           - Include common misconceptions
-           - Make wrong options educational
-
-        4. Format Requirements:
-           - Question must be detailed and specific
-           - Each option must be substantive
-           - Explanation must cover why correct answer is right AND why others are wrong
-           - Include real-world context where possible
-           - Use age-appropriate language
-
-        ENSURE HIGH ENTROPY:
-        - Randomize question patterns
-        - Vary difficulty within level ${level}
-        - Mix theoretical and practical aspects
-        - Use different companies/technologies as examples
-        - Include various ${topic} scenarios
-
-        EXPLANATION GUIDELINES:
-        - Keep explanations extremely concise and clear
-        - Focus on the most important point only
-        - Use simple language
-        - Highlight the key concept
-        - No redundant information
-        - Maximum 25 words total`;
+        }`;
 
       const userPrompt = `Create a completely unique ${level}/10 difficulty question about ${topic}.
         Focus on ${selectedAspect.replace('_', ' ')}.
@@ -317,10 +244,8 @@ import OpenAI from 'openai';
         throw new Error('Invalid JSON response');
       }
 
-      // Randomly shuffle the options and adjust correctAnswer accordingly
       const shuffled = this.shuffleOptionsAndAnswer(parsedContent);
 
-      // Validate and format the question
       const formattedQuestion: Question = {
         text: shuffled.text || '',
         options: shuffled.options,
@@ -348,19 +273,16 @@ import OpenAI from 'openai';
   }
 
   private shuffleOptionsAndAnswer(question: Question): Question {
-    // Create array of option objects with original index
     const optionsWithIndex = question.options.map((opt, idx) => ({
       text: opt,
       isCorrect: idx === question.correctAnswer
     }));
 
-    // Shuffle the options
     for (let i = optionsWithIndex.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [optionsWithIndex[i], optionsWithIndex[j]] = [optionsWithIndex[j], optionsWithIndex[i]];
     }
 
-    // Find new index of correct answer
     const newCorrectAnswer = optionsWithIndex.findIndex(opt => opt.isCorrect);
 
     return {
@@ -368,9 +290,9 @@ import OpenAI from 'openai';
       options: optionsWithIndex.map(opt => opt.text),
       correctAnswer: newCorrectAnswer
     };
-    }
-  
-    async getTestQuestions(topic: string, examType: 'JEE' | 'NEET'): Promise<Question[]> {
+  }
+
+  async getTestQuestions(topic: string, examType: 'JEE' | 'NEET'): Promise<Question[]> {
     try {
       const systemPrompt = `Create a ${examType} exam test set about ${topic}.
         Generate exactly 15 questions following this structure:
@@ -389,40 +311,24 @@ import OpenAI from 'openai';
             }
           ]
         }`;
-        // ..
-        
 
-      console.log('Generating test questions...');
-      
-      const content = await this.makeRequest(
-        systemPrompt,
-        `Create 15 ${examType} questions about ${topic} (5 easy, 5 medium, 5 hard)`,
-        3000
-      );
-
-      console.log('Received response from API');
+      const content = await this.makeRequest(systemPrompt, `Create 15 ${examType} questions about ${topic} (5 easy, 5 medium, 5 hard)`, 3000);
 
       if (!content) {
-        console.error('Empty response from API');
         throw new Error('No content received from API');
       }
 
       let parsed;
       try {
         parsed = JSON.parse(content);
-        console.log('Successfully parsed JSON response');
       } catch (error) {
         console.error('JSON parse error:', error);
-        console.log('Raw content:', content);
         throw new Error('Failed to parse API response');
       }
 
       if (!parsed?.questions || !Array.isArray(parsed.questions)) {
-        console.error('Invalid response structure:', parsed);
         throw new Error('Invalid response structure');
       }
-
-      console.log(`Received ${parsed.questions.length} questions`);
 
       const processedQuestions = parsed.questions.map((q: Partial<Question>, index: number) => {
         const difficulty = Math.floor(index / 5) + 1;
@@ -440,22 +346,10 @@ import OpenAI from 'openai';
         } as Question;
       });
 
-      console.log('Processed questions:', processedQuestions.length);
-
-      const validQuestions = processedQuestions.filter((q: Question) => {
-        const isValid = this.validateQuestionFormat(q);
-        if (!isValid) {
-          console.log('Invalid question:', q);
-        }
-        return isValid;
-      });
-
-      console.log(`Valid questions: ${validQuestions.length}`);
+      const validQuestions = processedQuestions.filter((q: Question) => this.validateQuestionFormat(q));
 
       if (validQuestions.length >= 5) {
-        const finalQuestions = validQuestions.slice(0, 15);
-        console.log(`Returning ${finalQuestions.length} questions`);
-        return finalQuestions;
+        return validQuestions.slice(0, 15);
       }
 
       throw new Error(`Only ${validQuestions.length} valid questions generated`);
@@ -471,11 +365,11 @@ import OpenAI from 'openai';
         model: 'gpt-3.5-turbo',
         messages: [
           {
-            role: 'system' as const,
+            role: 'system',
             content: 'You are a social media trend expert who explains topics by connecting them to current viral trends, memes, and pop culture moments.'
           },
           {
-            role: 'user' as const,
+            role: 'user',
             content: this.buildPrompt(query)
           }
         ],
@@ -490,7 +384,6 @@ import OpenAI from 'openai';
     }
   }
 
-  // Helper method to build the prompt
   private buildPrompt(query: string): string {
     return `
       Explain "${query}" using current social media trends, memes, and pop culture references.
@@ -509,15 +402,12 @@ import OpenAI from 'openai';
          - Mention trending shows/movies
          - Reference popular games
          - Include viral challenges
-         - Use trending audio references
       
       3. Make it Relatable With:
          - Instagram vs Reality comparisons
          - "That one friend who..." examples
          - "Nobody: / Me:" format
          - "Real ones know..." references
-         - "Living rent free in my head" examples
-         - "Core memory" references
       
       4. Structure it Like:
          - 🎭 The Hook (TikTok style intro)
@@ -580,7 +470,6 @@ import OpenAI from 'openai';
 
           RULES:
           - ADAPT CONTENT FOR ${userContext.age} YEAR OLD:
-            
             * Match complexity of explanation to age level
             
           - STRICT LENGTH LIMITS:
@@ -644,13 +533,11 @@ import OpenAI from 'openai';
           if (isJsonSection) {
             jsonContent += content;
             try {
-              // Try to parse complete JSON objects
               if (jsonContent.includes('}')) {
                 const jsonStr = jsonContent.trim();
                 if (jsonStr.startsWith('{') && jsonStr.endsWith('}')) {
                   const parsed = JSON.parse(jsonStr);
                   
-                  // Process topics if available
                   if (parsed.topics && Array.isArray(parsed.topics)) {
                     parsed.topics.forEach((topic: any) => {
                       if (!currentTopics.some(t => t.topic === topic.name)) {
@@ -663,7 +550,6 @@ import OpenAI from 'openai';
                     });
                   }
 
-                  // Process questions if available
                   if (parsed.questions && Array.isArray(parsed.questions)) {
                     parsed.questions.forEach((question: any) => {
                       if (!currentQuestions.some(q => q.question === question.text)) {
@@ -676,7 +562,6 @@ import OpenAI from 'openai';
                     });
                   }
 
-                  // Send update with current state
                   onChunk({
                     text: mainContent.trim(),
                     topics: currentTopics.length > 0 ? currentTopics : undefined,
@@ -685,7 +570,6 @@ import OpenAI from 'openai';
                 }
               }
             } catch (error) {
-              // Continue accumulating if parsing fails
               console.debug('JSON parse error:', error);
             }
           } else {
@@ -709,11 +593,10 @@ import OpenAI from 'openai';
           throw new Error(`Failed to stream content after ${maxRetries} attempts. ${errorMessage}`);
         }
 
-        // Wait before retrying (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
       }
     }
-    }
   }
-  
-  export const gptService = new GPTService();
+}
+
+export const gptService = new GPTService();

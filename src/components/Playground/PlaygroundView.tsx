@@ -1,4 +1,3 @@
-// src/components/Playground/PlaygroundView.tsx
 import React, { useState, useEffect } from "react";
 import { SearchBar } from "../shared/SearchBar";
 import { Loading } from "../shared/Loading";
@@ -21,14 +20,6 @@ interface Stats {
   avgTime: number;
 }
 
-interface TopicProgress {
-  totalAttempts: number;
-  successRate: number;
-  averageTime: number;
-  lastLevel: number;
-  masteryScore: number;
-}
-
 export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
   initialQuery,
   onError,
@@ -42,17 +33,8 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [nextQuestionTimer, setNextQuestionTimer] = useState<ReturnType<
-    typeof setTimeout
-  > | null>(null);
   const [currentQuestionTime, setCurrentQuestionTime] = useState<number>(0);
-  const [timerInterval, setTimerInterval] = useState<ReturnType<
-    typeof setInterval
-  > | null>(null);
-  const [nextQuestionCountdown, setNextQuestionCountdown] = useState<
-    number | null
-  >(null);
-
+  const [timerInterval, setTimerInterval] = useState<ReturnType<typeof setInterval> | null>(null);
   const [sessionStats, setSessionStats] = useState({
     totalQuestions: 0,
     sessionLimit: 25,
@@ -67,27 +49,13 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     avgTime: 0,
   });
 
-  const [_topicProgress, _setTopicProgress] = useState<TopicProgress>(() => {
-    const saved = localStorage.getItem(`topic-progress-${query}`);
-    return saved
-      ? JSON.parse(saved)
-      : {
-          totalAttempts: 0,
-          successRate: 0,
-          averageTime: 0,
-          lastLevel: 1,
-          masteryScore: 0,
-        };
-  });
-
   const [nextQuestion, setNextQuestion] = useState<Question | null>(null);
   const [preloadedQuestion, setPreloadedQuestion] = useState<Question | null>(null);
-
-  // Add state for tracking when to show next question
   const [shouldShowNext, setShouldShowNext] = useState(false);
+  const COUNTDOWN_DURATION = 5;
+  const [nextQuestionCountdown, setNextQuestionCountdown] = useState<number | null>(null);
 
   const startQuestionTimer = (): void => {
-    // Clear any existing timer first
     if (timerInterval) {
       clearInterval(timerInterval);
     }
@@ -105,30 +73,18 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     }
   };
 
-  const prefetchNextQuestion = async () => {
-    try {
-      const question = await getQuestion(query, 1, userContext);
-      setNextQuestion(question);
-    } catch (error) {
-      console.error("Error prefetching next question:", error);
-    }
-  };
-
   const fetchNewQuestion = async () => {
     if (!query) return;
 
     if (sessionStats.totalQuestions >= sessionStats.sessionLimit) {
       setSessionStats((prev) => ({ ...prev, isSessionComplete: true }));
       stopQuestionTimer();
-      if (nextQuestionTimer) clearTimeout(nextQuestionTimer);
       onSuccess("Congratulations! You've completed your practice session! 🎉");
       return;
     }
 
     try {
-      console.log('Fetching next question...'); // Debug log
       const question = await getQuestion(query, 1, userContext);
-      console.log('Question loaded:', question); // Debug log
       setPreloadedQuestion(question);
     } catch (error) {
       console.error("Error fetching question:", error);
@@ -144,29 +100,23 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
       setShowExplanation(false);
       setQuery(newQuery);
 
-      // Load first question immediately
       const firstQuestion = await getQuestion(newQuery, 1, userContext);
       setCurrentQuestion(firstQuestion);
-      setSelectedAnswer(null);
-      setCurrentQuestionTime(0); // Reset timer
-      startQuestionTimer(); // Start timer for first question
+      setCurrentQuestionTime(0);
+      startQuestionTimer();
 
-      // Reset stats for new topic
-      const isSameTopic = newQuery === query;
-      if (!isSameTopic) {
-        setStats({
-          questions: 0,
-          accuracy: 0,
-          streak: 0,
-          bestStreak: 0,
-          avgTime: 0,
-        });
-        setSessionStats({
-          totalQuestions: 0,
-          sessionLimit: 25,
-          isSessionComplete: false,
-        });
-      }
+      setStats({
+        questions: 0,
+        accuracy: 0,
+        streak: 0,
+        bestStreak: 0,
+        avgTime: 0,
+      });
+      setSessionStats({
+        totalQuestions: 0,
+        sessionLimit: 25,
+        isSessionComplete: false,
+      });
     } catch (error) {
       console.error("Search error:", error);
       onError("Failed to start practice session");
@@ -174,16 +124,6 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
       setIsInitialLoading(false);
     }
   };
-
-  const togglePause = () => {
-    setIsPaused(!isPaused);
-    if (nextQuestionTimer) {
-      clearTimeout(nextQuestionTimer);
-      setNextQuestionTimer(null);
-    }
-  };
-
-  const COUNTDOWN_DURATION = 5;
 
   const updateStats = (isCorrect: boolean): void => {
     setStats((prev) => {
@@ -209,7 +149,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
         const next = prev - 0.1;
         if (next <= 0) {
           clearInterval(interval);
-          setShouldShowNext(true); // Trigger question transition
+          setShouldShowNext(true);
           return null;
         }
         return next;
@@ -226,9 +166,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     updateStats(index === currentQuestion.correctAnswer);
     
     if (!isPaused) {
-      // Start loading next question immediately
       fetchNewQuestion();
-      // Start countdown for transition
       startCountdown();
     }
   };
@@ -246,28 +184,20 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
   }, [initialQuery]);
 
   useEffect(() => {
-    if (_topicProgress) {
-      console.log('Topic progress updated:', _topicProgress);
-    }
-  }, [_topicProgress]);
-
-  useEffect(() => {
     if (nextQuestion) {
-      prefetchNextQuestion();
+      setPreloadedQuestion(nextQuestion);
     }
   }, [nextQuestion]);
 
-  // Use useEffect to handle question transitions
   useEffect(() => {
     if (shouldShowNext && preloadedQuestion) {
-      console.log('Transitioning to next question:', preloadedQuestion);
       setCurrentQuestion(preloadedQuestion);
       setPreloadedQuestion(null);
       setShouldShowNext(false);
       setSelectedAnswer(null);
       setShowExplanation(false);
-      setCurrentQuestionTime(0); // Reset timer
-      startQuestionTimer(); // Start timer for new question
+      setCurrentQuestionTime(0);
+      startQuestionTimer();
       setSessionStats(prev => ({
         ...prev,
         totalQuestions: prev.totalQuestions + 1
@@ -275,7 +205,6 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     }
   }, [shouldShowNext, preloadedQuestion]);
 
-  // Add cleanup for timer
   useEffect(() => {
     return () => {
       if (timerInterval) {
@@ -393,7 +322,7 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
                 {currentQuestion?.text}
               </h2>
               <button
-                onClick={togglePause}
+                onClick={() => setIsPaused(!isPaused)}
                 className="p-2 rounded-lg hover:bg-gray-800 transition-colors flex-shrink-0"
               >
                 {isPaused ? (
@@ -493,5 +422,3 @@ export const PlaygroundView: React.FC<PlaygroundViewProps> = ({
     </div>
   );
 };
-
-// abc
