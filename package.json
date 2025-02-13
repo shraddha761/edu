@@ -1,8 +1,20 @@
 {
   "name": "edu-ai",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "homepage": "https://github.com/shraddha761/edu#readme",
+  "bugs": {
+    "url": "https://github.com/shraddha761/edu/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shraddha761/edu.git"
+  },
+  "license": "ISC",
+  "author": "",
   "type": "module",
+  "main": "eslint.config.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
